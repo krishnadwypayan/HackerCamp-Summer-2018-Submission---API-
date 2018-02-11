@@ -29,7 +29,27 @@ auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
 auth.set_access_token(access_key, access_secret)
 api = tweepy.API(auth)
 
-#Get all the tweets and their metadata
+# Stream twitter feed. Twitter only allows access to a users most recent 3240 tweets with this method
+@app.route('/twitter', methods=['POST'])
+def streamFeed():
+	screen_name = request.data
+	alltweets = []
+	new_tweets = api.user_timeline(screen_name = screen_name,count=200)
+	alltweets.extend(new_tweets)
+	oldest = alltweets[-1].id - 1
+	while len(new_tweets) > 0:
+		new_tweets = api.user_timeline(screen_name = screen_name,count=200,max_id=oldest)
+		alltweets.extend(new_tweets)
+	
+	outtweets = [[tweet.id_str, tweet.created_at, tweet.text.encode("utf-8")] for tweet in alltweets]
+	with open('%s_tweets.csv' % screen_name, 'wb') as f:
+		writer = csv.writer(f)
+		writer.writerow(["id","created_at","text"])
+		writer.writerows(outtweets)
+	pass
+	return jsonify({'result' : outtweets})
+
+#Get all the tweets from the database of the search_string and their metadata
 @app.route('/tweets', methods=['GET'])
 def getAllTweets():
 	tweets = mongo.db.tweets
@@ -167,11 +187,19 @@ def searchTextInTweet():
 		screen_name = t['tweet_screen_name'].encode("utf-8")
 		if keyword in text or keyword in screen_name:
 			output.append({
+								'tweet_time' : t['tweet_time'],
 								'tweet' : t['tweet_text'],
 								'screen_name' : t['tweet_screen_name']
 						})
+
+	outtweets = [[tweet['tweet_time'], tweet['tweet'].encode("utf-8"), tweet['screen_name'].encode("utf-8")] for tweet in output]
+	with open('%s_search_tweets.csv' % keyword, 'wb') as f:
+		writer = csv.writer(f)
+		writer.writerow(["created_at", "text", "screen_name"])
+		writer.writerows(outtweets)
+	pass
 	return jsonify({'result' : output})
 
 #Main program
 if __name__ == '__main__':
-    app.run(debug=True)
+	app.run(debug=True)
