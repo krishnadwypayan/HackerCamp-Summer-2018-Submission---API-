@@ -180,7 +180,7 @@ def getTweetsText():
 				})
 
 	outtweets = [[tweet['tweet_time'], tweet['tweet'].encode("utf-8"), tweet['screen_name'].encode("utf-8")] for tweet in output]
-	with open('%s_search_tweets.csv' % keyword, 'wb') as f:
+	with open('get_search_tweets.csv', 'wb') as f:
 		writer = csv.writer(f)
 		writer.writerow(["created_at", "text", "screen_name"])
 		writer.writerows(outtweets)
