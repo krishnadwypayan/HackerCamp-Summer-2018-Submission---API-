@@ -74,7 +74,7 @@ def getAllTweets():
 			'tweet_entities_user_mentions_name' : t['tweet_entities_user_mentions_name'],
 			'tweet_entities_user_mentions_screen_name' : t['tweet_entities_user_mentions_screen_name']
 		})
-		
+
 	return jsonify({'result' : output})
 
 #Get all tweets(limit set to 500, can be modified) matching a search_string and push them to database
@@ -234,6 +234,36 @@ def sortByDate():
 	with open('%s_order_sorted_tweets.csv' % asc, 'wb') as f:
 		writer = csv.writer(f)
 		writer.writerow(["created_at", "text", "screen_name"])
+		writer.writerows(outtweets)
+	pass
+
+	return jsonify({'result' : output})
+
+#Filtering on values. Need {column_name, condition, value} like {tweet_retweet_count, >, 1000}
+@app.route('/tweets/filter', methods=['POST'])
+def filterTweets():
+	column_name = request.form["column_name"]
+	condition = str(request.form["condition"])
+	if condition == "=":
+		condition = "=="
+	value = str(request.form["value"])
+	tweets = mongo.db.tweets
+	output = []
+	column = '%s' %column_name
+	for t in tweets.find():
+		exp = [str(t[column]), condition, value]
+		if eval(" ".join(exp)) == True:
+			output_dict = dict()
+			output_dict['tweet_time'] = t['tweet_time']
+			output_dict['tweet'] = t['tweet_text']
+			output_dict['screen_name'] = t['tweet_screen_name']
+			output_dict[column_name] = t[column]
+			output.append(output_dict)
+
+	outtweets = [[tweet['tweet_time'], tweet['tweet'].encode("utf-8"), tweet['screen_name'].encode("utf-8"), tweet[column]] for tweet in output]	
+	with open('%s_filtered_tweets.csv' % column_name, 'wb') as f:
+		writer = csv.writer(f)
+		writer.writerow(["created_at", "text", "screen_name", column_name])
 		writer.writerows(outtweets)
 	pass
 
