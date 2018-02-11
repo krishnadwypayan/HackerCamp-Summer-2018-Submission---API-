@@ -55,24 +55,26 @@ def getAllTweets():
 	tweets = mongo.db.tweets
 	output = []
 	for t in tweets.find():
-		output.append({'tweet_id' : t['tweet_id'], 
-						'tweet_time' : t['tweet_time'], 
-						'tweet_screen_name' : t['tweet_screen_name'],
-						'tweet_text' : t['tweet_text'],
-						'tweet_lang' : t['tweet_lang'],
-						'tweet_user_followers_count' : t['tweet_user_followers_count'],
-						'tweet_user_friends_count' : t['tweet_user_friends_count'],
-						'tweet_user_listed_count' : t['tweet_user_listed_count'],
-						'tweet_user_favourites_count' : t['tweet_user_favourites_count'],
-						'tweet_retweet_count' : t['tweet_retweet_count'],
-						'tweet_in_reply_to_screen_name' : t['tweet_in_reply_to_screen_name'],
-						'tweet_place_country' : t['tweet_place_country'],
-						'tweet_place_name' : t['tweet_place_name'],
-						'tweet_entities_hashtags' : t['tweet_entities_hashtags'],
-						'tweet_entities_urls' : t['tweet_entities_urls'],
-						'tweet_entities_user_mentions_name' : t['tweet_entities_user_mentions_name'],
-						'tweet_entities_user_mentions_screen_name' : t['tweet_entities_user_mentions_screen_name']
-						})
+		output.append({
+			'tweet_id' : t['tweet_id'], 
+			'tweet_time' : t['tweet_time'], 
+			'tweet_screen_name' : t['tweet_screen_name'],
+			'tweet_text' : t['tweet_text'],
+			'tweet_lang' : t['tweet_lang'],
+			'tweet_user_followers_count' : t['tweet_user_followers_count'],
+			'tweet_user_friends_count' : t['tweet_user_friends_count'],
+			'tweet_user_listed_count' : t['tweet_user_listed_count'],
+			'tweet_user_favourites_count' : t['tweet_user_favourites_count'],
+			'tweet_retweet_count' : t['tweet_retweet_count'],
+			'tweet_in_reply_to_screen_name' : t['tweet_in_reply_to_screen_name'],
+			'tweet_place_country' : t['tweet_place_country'],
+			'tweet_place_name' : t['tweet_place_name'],
+			'tweet_entities_hashtags' : t['tweet_entities_hashtags'],
+			'tweet_entities_urls' : t['tweet_entities_urls'],
+			'tweet_entities_user_mentions_name' : t['tweet_entities_user_mentions_name'],
+			'tweet_entities_user_mentions_screen_name' : t['tweet_entities_user_mentions_screen_name']
+		})
+		
 	return jsonify({'result' : output})
 
 #Get all tweets(limit set to 500, can be modified) matching a search_string and push them to database
@@ -123,44 +125,44 @@ def searchQuery():
 			tweet_place_name = tweet.place.name
 		
 		tweet = tweets.insert({
-								'tweet_id' : tweet_id, 
-								'tweet_time' : tweet_time,
-								'tweet_screen_name' : tweet_screen_name,
-								'tweet_text' : tweet_text, 
-								'tweet_lang' : tweet_lang,
-								'tweet_user_followers_count' : tweet_user_followers_count,
-								'tweet_user_friends_count' : tweet_user_friends_count,
-								'tweet_user_listed_count' : tweet_user_listed_count,
-								'tweet_user_favourites_count' : tweet_user_favourites_count,
-								'tweet_retweet_count' : tweet_retweet_count,
-								'tweet_in_reply_to_screen_name' : tweet_in_reply_to_screen_name,
-								'tweet_place_country' : tweet_place_country,
-								'tweet_place_name' : tweet_place_name,
-								'tweet_entities_hashtags' : tweet_entities_hashtags,
-								'tweet_entities_urls' : tweet_entities_urls,
-								'tweet_entities_user_mentions_name' : tweet_entities_user_mentions_name,
-								'tweet_entities_user_mentions_screen_name' : tweet_entities_user_mentions_screen_name
-							})
+						'tweet_id' : tweet_id, 
+						'tweet_time' : tweet_time,
+						'tweet_screen_name' : tweet_screen_name,
+						'tweet_text' : tweet_text, 
+						'tweet_lang' : tweet_lang,
+						'tweet_user_followers_count' : tweet_user_followers_count,
+						'tweet_user_friends_count' : tweet_user_friends_count,
+						'tweet_user_listed_count' : tweet_user_listed_count,
+						'tweet_user_favourites_count' : tweet_user_favourites_count,
+						'tweet_retweet_count' : tweet_retweet_count,
+						'tweet_in_reply_to_screen_name' : tweet_in_reply_to_screen_name,
+						'tweet_place_country' : tweet_place_country,
+						'tweet_place_name' : tweet_place_name,
+						'tweet_entities_hashtags' : tweet_entities_hashtags,
+						'tweet_entities_urls' : tweet_entities_urls,
+						'tweet_entities_user_mentions_name' : tweet_entities_user_mentions_name,
+						'tweet_entities_user_mentions_screen_name' : tweet_entities_user_mentions_screen_name
+					})
 		
 		inside_output = {
-							'tweet_id' : tweet_id, 
-							'tweet_time' : tweet_time,
-							'tweet_screen_name' : tweet_screen_name,
-							'tweet_text' : tweet_text, 
-							'tweet_lang' : tweet_lang,
-							'tweet_user_followers_count' : tweet_user_followers_count,
-							'tweet_user_friends_count' : tweet_user_friends_count,
-							'tweet_user_listed_count' : tweet_user_listed_count,
-							'tweet_user_favourites_count' : tweet_user_favourites_count,
-							'tweet_retweet_count' : tweet_retweet_count,
-							'tweet_in_reply_to_screen_name' : tweet_in_reply_to_screen_name,
-							'tweet_place_country' : tweet_place_country,
-							'tweet_place_name' : tweet_place_name,
-							'tweet_entities_hashtags' : tweet_entities_hashtags,
-							'tweet_entities_urls' : tweet_entities_urls,
-							'tweet_entities_user_mentions_name' : tweet_entities_user_mentions_name,
-							'tweet_entities_user_mentions_screen_name' : tweet_entities_user_mentions_screen_name
-						}
+						'tweet_id' : tweet_id, 
+						'tweet_time' : tweet_time,
+						'tweet_screen_name' : tweet_screen_name,
+						'tweet_text' : tweet_text, 
+						'tweet_lang' : tweet_lang,
+						'tweet_user_followers_count' : tweet_user_followers_count,
+						'tweet_user_friends_count' : tweet_user_friends_count,
+						'tweet_user_listed_count' : tweet_user_listed_count,
+						'tweet_user_favourites_count' : tweet_user_favourites_count,
+						'tweet_retweet_count' : tweet_retweet_count,
+						'tweet_in_reply_to_screen_name' : tweet_in_reply_to_screen_name,
+						'tweet_place_country' : tweet_place_country,
+						'tweet_place_name' : tweet_place_name,
+						'tweet_entities_hashtags' : tweet_entities_hashtags,
+						'tweet_entities_urls' : tweet_entities_urls,
+						'tweet_entities_user_mentions_name' : tweet_entities_user_mentions_name,
+						'tweet_entities_user_mentions_screen_name' : tweet_entities_user_mentions_screen_name
+					}
 
 		output.append(inside_output)
 	return jsonify({'result' : output})
@@ -172,8 +174,17 @@ def getTweetsText():
 	output = []
 	for t in tweets.find():
 		output.append({
+				'tweet_time' : t['tweet_time'],
+				'tweet' : t['tweet_text'],
+				'screen_name' : t['tweet_screen_name']
+				})
 
-			'tweet' : t['tweet_text']})
+	outtweets = [[tweet['tweet_time'], tweet['tweet'].encode("utf-8"), tweet['screen_name'].encode("utf-8")] for tweet in output]
+	with open('%s_search_tweets.csv' % keyword, 'wb') as f:
+		writer = csv.writer(f)
+		writer.writerow(["created_at", "text", "screen_name"])
+		writer.writerows(outtweets)
+	pass
 	return jsonify({'result' : output})
 
 #Text Search in tweet text/user name
@@ -187,13 +198,12 @@ def searchTextInTweet():
 		screen_name = t['tweet_screen_name'].encode("utf-8")
 		if keyword in text or keyword in screen_name:
 			output.append({
-								'tweet_time' : t['tweet_time'],
-								'tweet' : t['tweet_text'],
-								'screen_name' : t['tweet_screen_name']
-						})
+					'tweet_time' : t['tweet_time'],
+					'tweet' : t['tweet_text'],
+					'screen_name' : t['tweet_screen_name']
+					})
 
 	outtweets = [[tweet['tweet_time'], tweet['tweet'].encode("utf-8"), tweet['screen_name'].encode("utf-8")] for tweet in output]
-	
 	with open('%s_search_tweets.csv' % keyword, 'wb') as f:
 		writer = csv.writer(f)
 		writer.writerow(["created_at", "text", "screen_name"])
