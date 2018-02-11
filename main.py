@@ -219,10 +219,10 @@ def sortByDate():
 	output = []
 	for t in tweets.find().sort('tweet_time'):
 		output.append({
-						'tweet_time' : t['tweet_time'],
-						'tweet' : t['tweet_text'],
-						'screen_name' : t['tweet_screen_name']
-					})
+				'tweet_time' : t['tweet_time'],
+				'tweet' : t['tweet_text'],
+				'screen_name' : t['tweet_screen_name']
+			})
 
 	desc_output = []
 	if asc.lower() == "descending":
