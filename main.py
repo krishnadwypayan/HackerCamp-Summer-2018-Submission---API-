@@ -193,11 +193,40 @@ def searchTextInTweet():
 						})
 
 	outtweets = [[tweet['tweet_time'], tweet['tweet'].encode("utf-8"), tweet['screen_name'].encode("utf-8")] for tweet in output]
+	
 	with open('%s_search_tweets.csv' % keyword, 'wb') as f:
 		writer = csv.writer(f)
 		writer.writerow(["created_at", "text", "screen_name"])
 		writer.writerows(outtweets)
 	pass
+	return jsonify({'result' : output})
+
+#Sort data based on date/time
+@app.route('/tweets/sort_by_date', methods=['POST'])
+def sortByDate():
+	asc = request.form["date"]
+	tweets = mongo.db.tweets
+	output = []
+	for t in tweets.find().sort('tweet_time'):
+		output.append({
+						'tweet_time' : t['tweet_time'],
+						'tweet' : t['tweet_text'],
+						'screen_name' : t['tweet_screen_name']
+					})
+
+	desc_output = []
+	if asc.lower() == "descending":
+		for v in reversed(output):
+			desc_output.append(v)
+		output = desc_output
+
+	outtweets = [[tweet['tweet_time'], tweet['tweet'].encode("utf-8"), tweet['screen_name'].encode("utf-8")] for tweet in output]	
+	with open('%s_order_sorted_tweets.csv' % asc, 'wb') as f:
+		writer = csv.writer(f)
+		writer.writerow(["created_at", "text", "screen_name"])
+		writer.writerows(outtweets)
+	pass
+
 	return jsonify({'result' : output})
 
 #Main program
