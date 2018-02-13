@@ -11,6 +11,7 @@ import csv
 import json
 from HTMLParser import HTMLParser
 import re
+import itertools
 
 #App Configurations
 app = Flask(__name__)
@@ -31,9 +32,10 @@ auth.set_access_token(access_key, access_secret)
 api = tweepy.API(auth)
 
 # Stream twitter feed. Twitter only allows access to a users most recent 3240 tweets with this method
-@app.route('/twitter', methods=['POST'])
+# Type the screen_name in raw as query.
+@app.route('/twitter', methods=['GET'])
 def streamFeed():
-	screen_name = request.data
+	screen_name = request.args.get('name')
 	alltweets = []
 	new_tweets = api.user_timeline(screen_name = screen_name,count=200)
 	alltweets.extend(new_tweets)
@@ -50,12 +52,13 @@ def streamFeed():
 	pass
 	return jsonify({'result' : outtweets})
 
-#Get all the tweets from the database of the search_string and their metadata
+#Get all the tweets from the database of the search_string and their metadata. The results are paginated.
 @app.route('/tweets', methods=['GET'])
 def getAllTweets():
+	page = int(request.args.get('page'))
 	tweets = mongo.db.tweets
 	output = []
-	for t in tweets.find():
+	for t in tweets.find().skip((page-1)*10).limit(10):
 		output.append({
 			'tweet_id' : t['tweet_id'], 
 			'tweet_time' : t['tweet_time'], 
@@ -70,6 +73,7 @@ def getAllTweets():
 			'tweet_in_reply_to_screen_name' : t['tweet_in_reply_to_screen_name'],
 			'tweet_place_country' : t['tweet_place_country'],
 			'tweet_place_name' : t['tweet_place_name'],
+			'tweet_user_location' : t['tweet_user_location'],
 			'tweet_entities_hashtags' : t['tweet_entities_hashtags'],
 			'tweet_entities_urls' : t['tweet_entities_urls'],
 			'tweet_entities_user_mentions_name' : t['tweet_entities_user_mentions_name'],
@@ -78,10 +82,11 @@ def getAllTweets():
 
 	return jsonify({'result' : output})
 
-#Get all tweets(limit set to 500, can be modified) matching a search_string and push them to database
-@app.route('/tweets', methods=['GET','POST'])
+# Get all tweets(limit set to 500, can be modified) matching a search_string and push them to database.
+@app.route('/tweets/get', methods=['GET'])
 def searchQuery():
-	search_string = request.data
+	search_string = request.args.get('find')
+	page = int(request.args.get('page'))
 	max_tweets = 500
 	searched_tweets = []
 	last_id = -1
@@ -99,7 +104,7 @@ def searchQuery():
 	tweets = mongo.db.tweets
 	tweets.remove({})
 	output = []
-	for tweet in searched_tweets:
+	for tweet in searched_tweets[(page-1)*10:(page-1)*10+10]:
 		tweet_id = tweet.id_str
 		tweet_time = tweet.created_at
 		tweet_text = tweet.text.encode("utf-8")
@@ -119,6 +124,7 @@ def searchQuery():
 		for vals in tweet_entities_user_mentions:
 			tweet_entities_user_mentions_name = vals[u'name']
 			tweet_entities_user_mentions_screen_name = vals[u'screen_name']
+		tweet_user_location = tweet.user.location.encode("utf-8")
 		tweet_place_country = ""
 		tweet_place_name = ""
 		if tweet.place is not None:
@@ -139,6 +145,7 @@ def searchQuery():
 						'tweet_in_reply_to_screen_name' : tweet_in_reply_to_screen_name,
 						'tweet_place_country' : tweet_place_country,
 						'tweet_place_name' : tweet_place_name,
+						'tweet_user_location' : tweet_user_location,
 						'tweet_entities_hashtags' : tweet_entities_hashtags,
 						'tweet_entities_urls' : tweet_entities_urls,
 						'tweet_entities_user_mentions_name' : tweet_entities_user_mentions_name,
@@ -159,6 +166,7 @@ def searchQuery():
 						'tweet_in_reply_to_screen_name' : tweet_in_reply_to_screen_name,
 						'tweet_place_country' : tweet_place_country,
 						'tweet_place_name' : tweet_place_name,
+						'tweet_user_location' : tweet_user_location,
 						'tweet_entities_hashtags' : tweet_entities_hashtags,
 						'tweet_entities_urls' : tweet_entities_urls,
 						'tweet_entities_user_mentions_name' : tweet_entities_user_mentions_name,
@@ -168,8 +176,8 @@ def searchQuery():
 		output.append(inside_output)
 	return jsonify({'result' : output})
 
-#Get output of all tweets containing their text only
-@app.route('/tweets/text', methods=['GET'])
+#Get output of all tweets containing their text only.
+@app.route('/tweets/texts', methods=['GET'])
 def getTweetsText():
 	tweets = mongo.db.tweets
 	output = []
@@ -188,15 +196,15 @@ def getTweetsText():
 	pass
 	return jsonify({'result' : output})
 
-#Text Search in tweet text/user name
-@app.route('/tweets/text', methods=['POST'])
+# Text Search in tweet text/user name.
+@app.route('/tweets/text', methods=['GET'])
 def searchTextInTweet():
-	keyword = request.data
+	keyword = request.args.get('text').lower()
 	tweets = mongo.db.tweets
 	output = []
 	for t in tweets.find():
-		text = t['tweet_text'].encode("utf-8")
-		screen_name = t['tweet_screen_name'].encode("utf-8")
+		text = t['tweet_text'].lower().encode("utf-8").split()
+		screen_name = t['tweet_screen_name'].lower().encode("utf-8").split()
 		if keyword in text or keyword in screen_name:
 			output.append({
 					'tweet_time' : t['tweet_time'],
@@ -212,10 +220,10 @@ def searchTextInTweet():
 	pass
 	return jsonify({'result' : output})
 
-#Sort data based on date/time
-@app.route('/tweets/sort_by_date', methods=['POST'])
+# Sort data based on date/time.
+@app.route('/tweets/date', methods=['GET'])
 def sortByDate():
-	asc = request.form["date"]
+	asc = request.args.get('sort')
 	tweets = mongo.db.tweets
 	output = []
 	for t in tweets.find().sort('tweet_time'):
@@ -240,14 +248,22 @@ def sortByDate():
 
 	return jsonify({'result' : output})
 
-#Filtering on values. Need {column_name, condition, value} like {tweet_retweet_count, >, 1000}
-@app.route('/tweets/filter', methods=['POST'])
+# Filtering on values
+@app.route('/tweets/filter', methods=['GET'])
 def filterTweets():
-	column_name = request.form["column_name"]
-	condition = str(request.form["condition"])
+	expression = request.args.get('get')
+	conditions = ['<', '>', '<=', '>=', '=', '!=']
+	condition = ""
+	pos = 0
+	for c in conditions:
+		pos = expression.find(c)
+		if pos is not -1:
+			condition = c
+			break
+	column_name = expression[0:pos]
+	value = expression[pos+len(condition):]
 	if condition == "=":
 		condition = "=="
-	value = str(request.form["value"])
 	tweets = mongo.db.tweets
 	output = []
 	column = '%s' %column_name
@@ -305,6 +321,8 @@ def matchString():
 		writer.writerows(outtweets)
 	pass
 	return jsonify({'result' : output})
+
+
 
 #Main program
 if __name__ == '__main__':
