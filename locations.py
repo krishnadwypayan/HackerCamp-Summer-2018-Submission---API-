@@ -50,7 +50,7 @@ def populateNearbyLocations(location):
 	return output
 
 # Returns the tweets in the radius of 500m of the specified location
-def getTweets(place):
+def getTweets(place, page):
 	locations = populateNearbyLocations(place)
 	updated_locations = locations.copy()
 	for locs in locations:
@@ -61,21 +61,22 @@ def getTweets(place):
 	tweets = mongo.db.tweets
 	output = []
 	for t in tweets:
-		if re.search(place, str(t['tweet_user_location'])):
-			tweet_details = {'tweet_id' : tweet_id, 'tweet_time' : tweet_time, 'tweet_screen_name' : tweet_screen_name,
-						'tweet_text' : tweet_text, 'tweet_lang' : tweet_lang, 'tweet_user_followers_count' : tweet_user_followers_count,
-						'tweet_user_friends_count' : tweet_user_friends_count, 'tweet_user_listed_count' : tweet_user_listed_count,
-						'tweet_user_favourites_count' : tweet_user_favourites_count, 'tweet_retweet_count' : tweet_retweet_count,
-						'tweet_in_reply_to_screen_name' : tweet_in_reply_to_screen_name, 'tweet_place_country' : tweet_place_country,
-						'tweet_place_name' : tweet_place_name, 'tweet_user_location' : tweet_user_location,	'tweet_entities_hashtags' : tweet_entities_hashtags, 
-						'tweet_entities_urls' : tweet_entities_urls, 'tweet_entities_user_mentions_name' : tweet_entities_user_mentions_name, 
-						'tweet_entities_user_mentions_screen_name' : tweet_entities_user_mentions_screen_name}
-			output.append(tweet_details)
+		for loc in updated_locations:
+			if re.search(loc, str(t['tweet_user_location'])):
+				tweet_details = {'tweet_id' : tweet_id, 'tweet_time' : tweet_time, 'tweet_screen_name' : tweet_screen_name,
+							'tweet_text' : tweet_text, 'tweet_lang' : tweet_lang, 'tweet_user_followers_count' : tweet_user_followers_count,
+							'tweet_user_friends_count' : tweet_user_friends_count, 'tweet_user_listed_count' : tweet_user_listed_count,
+							'tweet_user_favourites_count' : tweet_user_favourites_count, 'tweet_retweet_count' : tweet_retweet_count,
+							'tweet_in_reply_to_screen_name' : tweet_in_reply_to_screen_name, 'tweet_place_country' : tweet_place_country,
+							'tweet_place_name' : tweet_place_name, 'tweet_user_location' : tweet_user_location,	'tweet_entities_hashtags' : tweet_entities_hashtags, 
+							'tweet_entities_urls' : tweet_entities_urls, 'tweet_entities_user_mentions_name' : tweet_entities_user_mentions_name, 
+							'tweet_entities_user_mentions_screen_name' : tweet_entities_user_mentions_screen_name}
+				output.append(tweet_details)
 
-	outtweets = [[tweet['tweet_time'], tweet['tweet'].encode("utf-8"), tweet['screen_name'].encode("utf-8"), tweet['tweet_user_location']] for tweet in output]
-	with open(os.path.join(os.getcwd()+'/CSV/in_%s_radius_tweets.csv' % place), 'wb') as f:
+	outtweets = [[tweet['tweet_time'], tweet['tweet'].encode("utf-8"), tweet['screen_name'].encode("utf-8"), tweet['tweet_user_location']] for tweet in output[(page-1)*10:(page-1)*10 + 10]]
+	with open(os.path.join(os.getcwd()+'/CSV/in_%s_radius_tweets_%s.csv' % place % str(page)), 'wb') as f:
 		writer = csv.writer(f)
 		writer.writerow(["created_at", "text", "screen_name", "location"])
 		writer.writerows(outtweets)
 	pass
-	return output
+	return output[(page-1)*10:(page-1)*10 + 10]

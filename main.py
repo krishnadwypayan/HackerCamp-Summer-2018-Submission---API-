@@ -47,8 +47,9 @@ def checkCSVFolder():
 @app.route('/twitter', methods=['GET'])
 def streamFeed():
 	screen_name = request.args.get('name')
+	page = int(request.args.get('page'))
 	checkCSVFolder()
-	return jsonify({'result' : searchTweets.getTweetsOfScreenName(api, screen_name)})
+	return jsonify({'result' : searchTweets.getTweetsOfScreenName(api, screen_name, page)})
 
 # Get all tweets(limit set to 500, can be modified) matching a search_string and push them to database.
 @app.route('/tweets/get', methods=['GET'])
@@ -69,8 +70,9 @@ def getTweetsText():
 @app.route('/tweets/text', methods=['GET'])
 def searchTextInTweet():
 	keyword = request.args.get('text')
+	page = int(request.args.get('page'))
 	checkCSVFolder()
-	return jsonify({'result' : textSearchInTweetOrUsername(mongo, keyword)})
+	return jsonify({'result' : textSearchInTweetOrUsername(mongo, keyword, page)})
 
 # Sort data based on date/time.
 @app.route('/tweets/date', methods=['GET'])
@@ -92,17 +94,25 @@ def filterTweetsByCondition():
 @app.route('/tweets/search', methods=['GET'])
 def matchString():
 	keyword = request.args.get('find')
-	page = request.args.get('page')
+	page = int(request.args.get('page'))
 	checkCSVFolder()
 	return jsonify({'result' : filterTweets.regexMatchtweets(mongo, keyword, page)})
+
+# Filter tweets with url mentions
+@app.route('/tweets/urls', methods=['GET'])
+def filterTweetsByURLs():
+	page = int(request.args.get('page'))
+	checkCSVFolder()
+	return jsonify({'result' : filterTweets.filterTweetsByURLs(mongo, page)})
 
 # Getting Tweets of a nearby location
 @app.route('/tweets/nearby', methods=['GET'])
 def getNearbyTweets():
 	place = request.args.get('place')
+	page = int(request.args.get('page'))
 	output = getTweets(place)
 	checkCSVFolder()
-	return jsonify({'result' : getTweets(place)})
+	return jsonify({'result' : getTweets(place, page)})
 
 # Main program
 if __name__ == '__main__':
