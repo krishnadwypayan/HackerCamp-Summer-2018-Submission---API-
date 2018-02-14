@@ -28,7 +28,7 @@ def conditionFilter(mongo, expression, page):
 			output.append(output_dict)
 
 	outtweets = [[tweet['tweet_time'], tweet['tweet'].encode("utf-8"), tweet['screen_name'].encode("utf-8"), tweet[column]] for tweet in output[(page-1)*10:(page-1)*10 + 10]]	
-	with open(os.path.join(os.getcwd()+'/CSV/%s_filtered_tweets_%s.csv' % column % str(page)), 'wb') as f:
+	with open(os.path.join(os.getcwd()+'/CSV/%s_filtered_tweets_%s.csv' %(column, str(page))), 'wb') as f:
 		writer = csv.writer(f)
 		writer.writerow(["created_at", "text", "screen_name", column_name])
 		writer.writerows(outtweets)
@@ -54,7 +54,7 @@ def sortByDate(mongo, asc, page):
 		output = desc_output
 
 	outtweets = [[tweet['tweet_time'], tweet['tweet'].encode("utf-8"), tweet['screen_name'].encode("utf-8")] for tweet in output[(page-1)*10:(page-1)*10 + 10]]	
-	with open(os.path.join(os.getcwd()+'/CSV/%s_order_sorted_tweets_%s.csv' % asc % str(page)), 'wb') as f:
+	with open(os.path.join(os.getcwd()+'/CSV/%s_order_sorted_tweets_%s.csv' %(asc, str(page))), 'wb') as f:
 		writer = csv.writer(f)
 		writer.writerow(["created_at", "text", "screen_name"])
 		writer.writerows(outtweets)
@@ -94,7 +94,7 @@ def regexMatchTweets(mongo, keyword, page):
 			output.append(output_dict)
 	
 	outtweets = [[tweet['tweet_time'], tweet['tweet_text'].encode("utf-8"), tweet['tweet_screen_name'].encode("utf-8")] for tweet in output[(page-1)*10:(page-1)*10 + 10]]
-	with open(os.path.join(os.getcwd()+'/CSV/%s_search_tweets_%s.csv' % keyword % str(page)), 'wb') as f:
+	with open(os.path.join(os.getcwd()+'/CSV/%s_search_tweets_%s.csv' %(keyword, str(page))), 'wb') as f:
 		writer = csv.writer(f)
 		writer.writerow(["created_at", "text", "screen_name"])
 		writer.writerows(outtweets)
@@ -117,7 +117,7 @@ def textSearchInTweetOrUsername(mongo, keyword, page):
 					})
 
 	outtweets = [[tweet['tweet_time'], tweet['tweet'].encode("utf-8"), tweet['screen_name'].encode("utf-8")] for tweet in output[(page-1)*10:(page-1)*10 + 10]]
-	with open(os.path.join(os.getcwd()+'/CSV/%s_matched_tweets_%s.csv' % keyword % str(page)), 'wb') as f:
+	with open(os.path.join(os.getcwd()+'/CSV/%s_matched_tweets_%s.csv' % (keyword, str(page))), 'wb') as f:
 		writer = csv.writer(f)
 		writer.writerow(["created_at", "text", "screen_name"])
 		writer.writerows(outtweets)

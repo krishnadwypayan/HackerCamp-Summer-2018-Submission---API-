@@ -74,7 +74,7 @@ def getTweets(place, page):
 				output.append(tweet_details)
 
 	outtweets = [[tweet['tweet_time'], tweet['tweet'].encode("utf-8"), tweet['screen_name'].encode("utf-8"), tweet['tweet_user_location']] for tweet in output[(page-1)*10:(page-1)*10 + 10]]
-	with open(os.path.join(os.getcwd()+'/CSV/in_%s_radius_tweets_%s.csv' % place % str(page)), 'wb') as f:
+	with open(os.path.join(os.getcwd()+'/CSV/in_%s_radius_tweets_%s.csv' % (place, str(page))), 'wb') as f:
 		writer = csv.writer(f)
 		writer.writerow(["created_at", "text", "screen_name", "location"])
 		writer.writerows(outtweets)

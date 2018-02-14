@@ -19,7 +19,7 @@ def getTweetsOfScreenName(api, screen_name, page):
 		new_tweets = api.user_timeline(screen_name = screen_name,count=200)
 		alltweets.extend(new_tweets)
 		outtweets = [[tweet.id_str, tweet.user.screen_name, tweet.created_at, tweet.text.encode("utf-8")] for tweet in alltweets]
-		with open(os.path.join(os.getcwd()+'/CSV/%s_timeline_tweets_%s.csv' % screen_name % str(page)), 'wb') as f:
+		with open(os.path.join(os.getcwd()+'/CSV/%s_timeline_tweets_%s.csv' %(screen_name ,str(page))), 'wb') as f:
 			writer = csv.writer(f)
 			writer.writerow(["tweet_id", "screen_name", "created_at", "text"])
 			writer.writerows(outtweets)
@@ -95,7 +95,7 @@ def getAllTweets(mongo, api, search_string, page):
 		output.append(inside_output)
 
 	outtweets = [[tweet['tweet_time'], str(tweet['tweet_text']), str(tweet['tweet_screen_name'])] for tweet in output[(page-1)*10:(page-1)*10 + 10]]
-	with open(os.path.join(os.getcwd()+'/CSV/%s_search_tweets_%s.csv' % search_string % str(page)), 'wb') as f:
+	with open(os.path.join(os.getcwd()+'/CSV/%s_search_tweets_%s.csv' %(search_string, str(page))), 'wb') as f:
 		writer = csv.writer(f)
 		writer.writerow(["created_at", "text", "screen_name"])
 		writer.writerows(outtweets)
