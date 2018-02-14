@@ -1,17 +1,17 @@
 # -*- coding: utf-8 -*-
 
 #Imports
+import csv, json, itertools, re, time, tweepy, os, errno
 from flask import Flask, jsonify, url_for, redirect, request
 from flask_pymongo import PyMongo
 from flask_restful import Api, Resource
 from flask_cors import CORS, cross_origin
 from requests import get, post, put, delete
-import tweepy
-import csv
-import json
 from HTMLParser import HTMLParser
-import re
-import itertools
+from googleplaces import GooglePlaces, types, lang
+from locations import *
+import searchTweets
+import filterTweets
 
 #App Configurations
 app = Flask(__name__)
@@ -31,299 +31,79 @@ auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
 auth.set_access_token(access_key, access_secret)
 api = tweepy.API(auth)
 
+# Google Places API
+YOUR_API_KEY = 'AIzaSyDsb7cZdFqYBL3L6uFc2Wc-YJxaaWFjNnE'
+google_places = GooglePlaces(YOUR_API_KEY)
+
+# Check whether CSV Folder exists. Create, if not.
+def checkCSVFolder():
+	try:
+		os.makedirs("CSV")
+	except OSError as e:
+		if e.errno != errno.EEXIST:
+			raise
+
 # Stream twitter feed. Twitter only allows access to a users most recent 3240 tweets with this method
-# Type the screen_name in raw as query.
 @app.route('/twitter', methods=['GET'])
 def streamFeed():
 	screen_name = request.args.get('name')
-	alltweets = []
-	new_tweets = api.user_timeline(screen_name = screen_name,count=200)
-	alltweets.extend(new_tweets)
-	oldest = alltweets[-1].id - 1
-	while len(new_tweets) > 0:
-		new_tweets = api.user_timeline(screen_name = screen_name,count=200,max_id=oldest)
-		alltweets.extend(new_tweets)
-	
-	outtweets = [[tweet.id_str, tweet.created_at, tweet.text.encode("utf-8")] for tweet in alltweets]
-	with open('%s_tweets.csv' % screen_name, 'wb') as f:
-		writer = csv.writer(f)
-		writer.writerow(["id","created_at","text"])
-		writer.writerows(outtweets)
-	pass
-	return jsonify({'result' : outtweets})
-
-#Get all the tweets from the database of the search_string and their metadata. The results are paginated.
-@app.route('/tweets', methods=['GET'])
-def getAllTweets():
-	page = int(request.args.get('page'))
-	tweets = mongo.db.tweets
-	output = []
-	for t in tweets.find().skip((page-1)*10).limit(10):
-		output.append({
-			'tweet_id' : t['tweet_id'], 
-			'tweet_time' : t['tweet_time'], 
-			'tweet_screen_name' : t['tweet_screen_name'],
-			'tweet_text' : t['tweet_text'],
-			'tweet_lang' : t['tweet_lang'],
-			'tweet_user_followers_count' : t['tweet_user_followers_count'],
-			'tweet_user_friends_count' : t['tweet_user_friends_count'],
-			'tweet_user_listed_count' : t['tweet_user_listed_count'],
-			'tweet_user_favourites_count' : t['tweet_user_favourites_count'],
-			'tweet_retweet_count' : t['tweet_retweet_count'],
-			'tweet_in_reply_to_screen_name' : t['tweet_in_reply_to_screen_name'],
-			'tweet_place_country' : t['tweet_place_country'],
-			'tweet_place_name' : t['tweet_place_name'],
-			'tweet_user_location' : t['tweet_user_location'],
-			'tweet_entities_hashtags' : t['tweet_entities_hashtags'],
-			'tweet_entities_urls' : t['tweet_entities_urls'],
-			'tweet_entities_user_mentions_name' : t['tweet_entities_user_mentions_name'],
-			'tweet_entities_user_mentions_screen_name' : t['tweet_entities_user_mentions_screen_name']
-		})
-
-	return jsonify({'result' : output})
+	checkCSVFolder()
+	return jsonify({'result' : searchTweets.getTweetsOfScreenName(api, screen_name)})
 
 # Get all tweets(limit set to 500, can be modified) matching a search_string and push them to database.
 @app.route('/tweets/get', methods=['GET'])
 def searchQuery():
 	search_string = request.args.get('find')
 	page = int(request.args.get('page'))
-	max_tweets = 500
-	searched_tweets = []
-	last_id = -1
-	while len(searched_tweets) < max_tweets:
-		count = max_tweets - len(searched_tweets)
-		try:
-			new_tweets = api.search(q=search_string, count=count, max_id=str(last_id - 1))
-			if not new_tweets:
-				break
-			searched_tweets.extend(new_tweets)
-			last_id = new_tweets[-1].id
-		except tweepy.TweepError as e:
-			break
-
-	tweets = mongo.db.tweets
-	tweets.remove({})
-	output = []
-	for tweet in searched_tweets[(page-1)*10:(page-1)*10+10]:
-		tweet_id = tweet.id_str
-		tweet_time = tweet.created_at
-		tweet_text = tweet.text.encode("utf-8")
-		tweet_screen_name = tweet.user.screen_name
-		tweet_in_reply_to_screen_name = tweet.in_reply_to_screen_name
-		tweet_lang = tweet.user.lang
-		tweet_user_followers_count = tweet.user.followers_count
-		tweet_user_friends_count = tweet.user.friends_count
-		tweet_user_listed_count = tweet.user.listed_count
-		tweet_user_favourites_count = tweet.user.favourites_count
-		tweet_retweet_count = tweet.retweet_count
-		tweet_entities_hashtags = tweet.entities[u'hashtags']
-		tweet_entities_urls = tweet.entities[u'urls']
-		tweet_entities_user_mentions = tweet.entities[u'user_mentions']
-		tweet_entities_user_mentions_name = ""
-		tweet_entities_user_mentions_screen_name = ""
-		for vals in tweet_entities_user_mentions:
-			tweet_entities_user_mentions_name = vals[u'name']
-			tweet_entities_user_mentions_screen_name = vals[u'screen_name']
-		tweet_user_location = tweet.user.location.encode("utf-8")
-		tweet_place_country = ""
-		tweet_place_name = ""
-		if tweet.place is not None:
-			tweet_place_country = tweet.place.country
-			tweet_place_name = tweet.place.name
-		
-		tweet = tweets.insert({
-						'tweet_id' : tweet_id, 
-						'tweet_time' : tweet_time,
-						'tweet_screen_name' : tweet_screen_name,
-						'tweet_text' : tweet_text, 
-						'tweet_lang' : tweet_lang,
-						'tweet_user_followers_count' : tweet_user_followers_count,
-						'tweet_user_friends_count' : tweet_user_friends_count,
-						'tweet_user_listed_count' : tweet_user_listed_count,
-						'tweet_user_favourites_count' : tweet_user_favourites_count,
-						'tweet_retweet_count' : tweet_retweet_count,
-						'tweet_in_reply_to_screen_name' : tweet_in_reply_to_screen_name,
-						'tweet_place_country' : tweet_place_country,
-						'tweet_place_name' : tweet_place_name,
-						'tweet_user_location' : tweet_user_location,
-						'tweet_entities_hashtags' : tweet_entities_hashtags,
-						'tweet_entities_urls' : tweet_entities_urls,
-						'tweet_entities_user_mentions_name' : tweet_entities_user_mentions_name,
-						'tweet_entities_user_mentions_screen_name' : tweet_entities_user_mentions_screen_name
-					})
-		
-		inside_output = {
-						'tweet_id' : tweet_id, 
-						'tweet_time' : tweet_time,
-						'tweet_screen_name' : tweet_screen_name,
-						'tweet_text' : tweet_text, 
-						'tweet_lang' : tweet_lang,
-						'tweet_user_followers_count' : tweet_user_followers_count,
-						'tweet_user_friends_count' : tweet_user_friends_count,
-						'tweet_user_listed_count' : tweet_user_listed_count,
-						'tweet_user_favourites_count' : tweet_user_favourites_count,
-						'tweet_retweet_count' : tweet_retweet_count,
-						'tweet_in_reply_to_screen_name' : tweet_in_reply_to_screen_name,
-						'tweet_place_country' : tweet_place_country,
-						'tweet_place_name' : tweet_place_name,
-						'tweet_user_location' : tweet_user_location,
-						'tweet_entities_hashtags' : tweet_entities_hashtags,
-						'tweet_entities_urls' : tweet_entities_urls,
-						'tweet_entities_user_mentions_name' : tweet_entities_user_mentions_name,
-						'tweet_entities_user_mentions_screen_name' : tweet_entities_user_mentions_screen_name
-					}
-
-		output.append(inside_output)
-	return jsonify({'result' : output})
+	checkCSVFolder()
+	return jsonify({'result' : searchTweets.getAllTweets(mongo, api, search_string, page)})
 
 #Get output of all tweets containing their text only.
 @app.route('/tweets/texts', methods=['GET'])
 def getTweetsText():
-	tweets = mongo.db.tweets
-	output = []
-	for t in tweets.find():
-		output.append({
-				'tweet_time' : t['tweet_time'],
-				'tweet' : t['tweet_text'],
-				'screen_name' : t['tweet_screen_name']
-				})
-
-	outtweets = [[tweet['tweet_time'], tweet['tweet'].encode("utf-8"), tweet['screen_name'].encode("utf-8")] for tweet in output]
-	with open('get_search_tweets.csv', 'wb') as f:
-		writer = csv.writer(f)
-		writer.writerow(["created_at", "text", "screen_name"])
-		writer.writerows(outtweets)
-	pass
-	return jsonify({'result' : output})
+	page = int(request.args.get('page'))
+	checkCSVFolder()
+	return jsonify({'result' : filterTweets.getTweetsWithText(mongo, page)})
 
 # Text Search in tweet text/user name.
 @app.route('/tweets/text', methods=['GET'])
 def searchTextInTweet():
-	keyword = request.args.get('text').lower()
-	tweets = mongo.db.tweets
-	output = []
-	for t in tweets.find():
-		text = t['tweet_text'].lower().encode("utf-8").split()
-		screen_name = t['tweet_screen_name'].lower().encode("utf-8").split()
-		if keyword in text or keyword in screen_name:
-			output.append({
-					'tweet_time' : t['tweet_time'],
-					'tweet' : t['tweet_text'],
-					'screen_name' : t['tweet_screen_name']
-					})
-
-	outtweets = [[tweet['tweet_time'], tweet['tweet'].encode("utf-8"), tweet['screen_name'].encode("utf-8")] for tweet in output]
-	with open('%s_search_tweets.csv' % keyword, 'wb') as f:
-		writer = csv.writer(f)
-		writer.writerow(["created_at", "text", "screen_name"])
-		writer.writerows(outtweets)
-	pass
-	return jsonify({'result' : output})
+	keyword = request.args.get('text')
+	checkCSVFolder()
+	return jsonify({'result' : textSearchInTweetOrUsername(mongo, keyword)})
 
 # Sort data based on date/time.
 @app.route('/tweets/date', methods=['GET'])
 def sortByDate():
+	page = int(request.args.get('page'))
 	asc = request.args.get('sort')
-	tweets = mongo.db.tweets
-	output = []
-	for t in tweets.find().sort('tweet_time'):
-		output.append({
-				'tweet_time' : t['tweet_time'],
-				'tweet' : t['tweet_text'],
-				'screen_name' : t['tweet_screen_name']
-			})
-
-	desc_output = []
-	if asc.lower() == "descending":
-		for v in reversed(output):
-			desc_output.append(v)
-		output = desc_output
-
-	outtweets = [[tweet['tweet_time'], tweet['tweet'].encode("utf-8"), tweet['screen_name'].encode("utf-8")] for tweet in output]	
-	with open('%s_order_sorted_tweets.csv' % asc, 'wb') as f:
-		writer = csv.writer(f)
-		writer.writerow(["created_at", "text", "screen_name"])
-		writer.writerows(outtweets)
-	pass
-
-	return jsonify({'result' : output})
+	checkCSVFolder()
+	return jsonify({'result' : filterTweets.sortByDate(mongo, asc, page)})
 
 # Filtering on values
 @app.route('/tweets/filter', methods=['GET'])
-def filterTweets():
+def filterTweetsByCondition():
 	expression = request.args.get('get')
-	conditions = ['<', '>', '<=', '>=', '=', '!=']
-	condition = ""
-	pos = 0
-	for c in conditions:
-		pos = expression.find(c)
-		if pos is not -1:
-			condition = c
-			break
-	column_name = expression[0:pos]
-	value = expression[pos+len(condition):]
-	if condition == "=":
-		condition = "=="
-	tweets = mongo.db.tweets
-	output = []
-	column = '%s' %column_name
-	for t in tweets.find():
-		exp = [str(t[column]), condition, value]
-		if eval(" ".join(exp)) == True:
-			output_dict = dict()
-			output_dict['tweet_time'] = t['tweet_time']
-			output_dict['tweet'] = t['tweet_text']
-			output_dict['screen_name'] = t['tweet_screen_name']
-			output_dict[column_name] = t[column]
-			output.append(output_dict)
+	page = int(request.args.get('page'))
+	checkCSVFolder()
+	return jsonify({'result' : filterTweets.conditionFilter(mongo, expression, page)})
 
-	outtweets = [[tweet['tweet_time'], tweet['tweet'].encode("utf-8"), tweet['screen_name'].encode("utf-8"), tweet[column]] for tweet in output]	
-	with open('%s_filtered_tweets.csv' % column_name, 'wb') as f:
-		writer = csv.writer(f)
-		writer.writerow(["created_at", "text", "screen_name", column_name])
-		writer.writerows(outtweets)
-	pass
-
-	return jsonify({'result' : output})
-
-#Regex matching of a given string
-@app.route('/tweets/search', methods=['POST'])
+# Regex matching of a given string
+@app.route('/tweets/search', methods=['GET'])
 def matchString():
-	keyword = request.data
-	tweets = mongo.db.tweets
-	output = []
-	for t in tweets.find():
-		if re.search(keyword, str(t)):
-			output.append({
-			'tweet_id' : t['tweet_id'], 
-			'tweet_time' : t['tweet_time'], 
-			'tweet_screen_name' : t['tweet_screen_name'],
-			'tweet_text' : t['tweet_text'],
-			'tweet_lang' : t['tweet_lang'],
-			'tweet_user_followers_count' : t['tweet_user_followers_count'],
-			'tweet_user_friends_count' : t['tweet_user_friends_count'],
-			'tweet_user_listed_count' : t['tweet_user_listed_count'],
-			'tweet_user_favourites_count' : t['tweet_user_favourites_count'],
-			'tweet_retweet_count' : t['tweet_retweet_count'],
-			'tweet_in_reply_to_screen_name' : t['tweet_in_reply_to_screen_name'],
-			'tweet_place_country' : t['tweet_place_country'],
-			'tweet_place_name' : t['tweet_place_name'],
-			'tweet_entities_hashtags' : t['tweet_entities_hashtags'],
-			'tweet_entities_urls' : t['tweet_entities_urls'],
-			'tweet_entities_user_mentions_name' : t['tweet_entities_user_mentions_name'],
-			'tweet_entities_user_mentions_screen_name' : t['tweet_entities_user_mentions_screen_name']
-		})
+	keyword = request.args.get('find')
+	page = request.args.get('page')
+	checkCSVFolder()
+	return jsonify({'result' : filterTweets.regexMatchtweets(mongo, keyword, page)})
 
-	outtweets = [[tweet['tweet_time'], tweet['tweet_text'].encode("utf-8"), tweet['tweet_screen_name'].encode("utf-8")] for tweet in output]
-	with open('%s_search_tweets.csv' % keyword, 'wb') as f:
-		writer = csv.writer(f)
-		writer.writerow(["created_at", "text", "screen_name"])
-		writer.writerows(outtweets)
-	pass
-	return jsonify({'result' : output})
+# Getting Tweets of a nearby location
+@app.route('/tweets/nearby', methods=['GET'])
+def getNearbyTweets():
+	place = request.args.get('place')
+	output = getTweets(place)
+	checkCSVFolder()
+	return jsonify({'result' : getTweets(place)})
 
-
-
-#Main program
+# Main program
 if __name__ == '__main__':
 	app.run(debug=True)
