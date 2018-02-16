@@ -29,3 +29,9 @@ python main.py
 
 ## Documentation
 Complete documentation and instructions are available at: https://documenter.getpostman.com/view/3710139/tweetfilter/RVfwir4S
+
+## License
+The TweetFilter RESTful API is licensed under [MIT License](https://opensource.org/licenses/MIT). Copyright (c) 2018 TweetFilter.
+
+## Author
+Krishna Dwypayan Kota
