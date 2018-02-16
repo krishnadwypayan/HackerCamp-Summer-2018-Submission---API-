@@ -1,4 +1,7 @@
 from main import *
+from pymongo import Connection
+from pymongo.errors import ConnectionFailure
+import pymongo
 
 # Filter the tweets according to the given expression evaluation.
 def conditionFilter(mongo, expression, page):
@@ -66,7 +69,15 @@ def sortByDate(mongo, asc, page):
 def getTweetsWithText(mongo, page):
 	tweets = mongo.db.tweets
 	output = []
-	for t in tweets.find():
+	try:
+		c = Connection(host="localhost", port=27017)
+	except ConnectionFailure, e:
+		sys.stderr.write("Could not connect to MongoDB: %s" % e)
+		sys.exit(1)
+	dbh = c["tweets_db"]
+	assert dbh.connection == c
+	tweets_get = tweets.find({}).sort("tweet_time", pymongo.DESCENDING)
+	for t in tweets_get:
 		output.append({
 				'tweet_time' : t['tweet_time'],
 				'tweet' : t['tweet_text'],
@@ -85,7 +96,7 @@ def getTweetsWithText(mongo, page):
 def regexMatchTweets(mongo, keyword, page):
 	tweets = mongo.db.tweets
 	output = []
-	for t in tweets.find():
+	for t in tweets.find().sort("tweet_time", pymongo.DESCENDING):
 		if re.search(keyword, str(t)):
 			output_dict = dict()
 			output_dict['tweet_time'] = t['tweet_time']
@@ -106,7 +117,7 @@ def regexMatchTweets(mongo, keyword, page):
 def textSearchInTweetOrUsername(mongo, keyword, page):
 	tweets = mongo.db.tweets
 	output = []
-	for t in tweets.find():
+	for t in tweets.find().sort("tweet_time", pymongo.DESCENDING):
 		text = t['tweet_text'].lower().encode("utf-8").split()
 		screen_name = t['tweet_screen_name'].lower().encode("utf-8").split()
 		if keyword in text or keyword in screen_name:
@@ -124,10 +135,11 @@ def textSearchInTweetOrUsername(mongo, keyword, page):
 	pass
 	return output[(page-1)*10:(page-1)*10 + 10]
 
+# Search for the tweets with url mentions and return them.
 def filterTweetsByURLs(mongo, page):
 	tweets = mongo.db.tweets
 	output = []
-	for t in tweets.find():
+	for t in tweets.find().sort("tweet_time", pymongo.DESCENDING):
 		if t['tweet_entities_urls'] is not "":
 			output.append({
 					'tweet_time' : t['tweet_time'],
@@ -135,10 +147,10 @@ def filterTweetsByURLs(mongo, page):
 					'screen_name' : t['tweet_screen_name'],
 					'url_mentions' : t['tweet_entities_urls']
 				})
-	outtweets = [[tweet['tweet_time'], tweet['tweet'].encode("utf-8"), tweet['screen_name'].encode("utf-8"), tweet['tweet_entities_urls']] for tweet in output[(page-1)*10:(page-1)*10 + 10]]
+	outtweets = [[tweet['tweet_time'], tweet['tweet'].encode("utf-8"), tweet['screen_name'].encode("utf-8"), tweet['url_mentions']] for tweet in output[(page-1)*10:(page-1)*10 + 10]]
 	with open(os.path.join(os.getcwd()+'/CSV/url_mentions_tweets_%s.csv' % str(page)), 'wb') as f:
 		writer = csv.writer(f)
-		writer.writerow(["created_at", "text", "screen_name"])
+		writer.writerow(["created_at", "text", "screen_name", "url_mentions"])
 		writer.writerows(outtweets)
 	pass
 	return output[(page-1)*10:(page-1)*10 + 10]	

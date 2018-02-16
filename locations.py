@@ -3,6 +3,7 @@ import re
 import time
 from main import mongo as mongo
 import countries
+import click
 
 # Google API Key
 YOUR_API_KEY = 'AIzaSyBAaSHwdm7HgjEx855RGM6vszvWVm99t_o'
@@ -40,13 +41,16 @@ def getSearchIndex(val):
 def populateNearbyLocations(location):
 	output = set()
 	for i in range(1, 14):
-		print "Loading locations [", i, "/ 14 ]..."
-		query_result = google_places.nearby_search(location=str(location), radius=500, types=getSearchIndex(i))
-		for place in query_result.places:
-			place.get_details()
-			for p in cleanhtml(place.details['adr_address']).split(','):
-				output.add(p)
-			time.sleep(1.1)
+		print i, "/14 : "
+		with click.progressbar(range(1000000)) as bar:
+			for b in bar:
+				pass 
+			query_result = google_places.nearby_search(location=str(location), radius=500, types=getSearchIndex(i))
+			for place in query_result.places:
+				place.get_details()
+				for p in cleanhtml(place.details['adr_address']).split(','):
+					output.add(p)
+				time.sleep(1.1)
 	return output
 
 # Returns the tweets in the radius of 500m of the specified location

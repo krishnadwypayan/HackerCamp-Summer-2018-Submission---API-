@@ -57,7 +57,7 @@ def searchQuery():
 	search_string = request.args.get('find')
 	page = int(request.args.get('page'))
 	checkCSVFolder()
-	return jsonify({'result' : searchTweets.getAllTweets(mongo, api, search_string, page)})
+	return jsonify({'result' : searchTweets.getAllTweets(auth, search_string, page)})
 
 #Get output of all tweets containing their text only.
 @app.route('/tweets/texts', methods=['GET'])
@@ -96,7 +96,7 @@ def matchString():
 	keyword = request.args.get('find')
 	page = int(request.args.get('page'))
 	checkCSVFolder()
-	return jsonify({'result' : filterTweets.regexMatchtweets(mongo, keyword, page)})
+	return jsonify({'result' : filterTweets.regexMatchTweets(mongo, keyword, page)})
 
 # Filter tweets with url mentions
 @app.route('/tweets/urls', methods=['GET'])
@@ -110,7 +110,6 @@ def filterTweetsByURLs():
 def getNearbyTweets():
 	place = request.args.get('place')
 	page = int(request.args.get('page'))
-	output = getTweets(place)
 	checkCSVFolder()
 	return jsonify({'result' : getTweets(place, page)})
 
